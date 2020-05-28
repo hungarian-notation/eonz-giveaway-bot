@@ -1,0 +1,94 @@
+{
+    "token": "",
+
+    "channels": {
+        "public":   "715311307334877278",
+        "control":  "715339846922666065",
+        "bridge":   "715369272175493172"
+    },
+
+    "db": "./giveaway.sqlite",
+
+    "personality": {
+        "announce": [
+            [
+                "Would you like to play a game?",
+                "DM me for more information."
+            ],
+
+            [
+                "Do you have a death wish? Sign up for a chance to join our Minecraft server.",
+                "DM me for details!"
+            ]
+        ],
+
+        "announce/winners": [
+            [
+                "Our next winners:",
+                "{winners}",
+                "Check your DMs for instructions if you won."
+            ]
+        ],
+        
+        "accept": [
+            [
+                "Ok, **{discordUser}**, I have registered you in the contest under minecraft username: **{minecraftUser}**",
+                "I will message you again if you win, so stay tuned!"
+            ]
+        ],
+
+        "reject/duplicate": [
+            [ "Nice try, but you are already registered." ]
+        ],
+
+        "win": [
+            [
+                "Congratulations, you have been selected in the drawing.",
+                "Your minecraft account (**{minecraftUser}**) has been whitelisted. Please connect to: 192.168.420.420"
+            ]
+        ],
+
+        "minecraft/whitelist": [
+            "/whitelist add {minecraftUser}"
+        ],
+
+        "help": [
+            [
+                "Hello, **{discordUser}**!",
+                "To register for a chance to join the server, please reply: `!register <username>`",
+                "It's important to register your Minecraft username so I can whitelist you if you win!"
+            ]
+        ],
+
+        "help/missing-username": [
+            [
+                "Close, but I need you to tell me your Minecraft username.",
+                "For example, if your minecraft username was **{discordUser}**, you would reply: `!register {discordUser}`",
+                "Alternatively, if your minecraft username was **YorkshireGold**, you would reply: `!register YorkshireGold`"
+            ]
+        ],
+
+        "help/unknown-command": [
+            [
+                "I'm not sure what you mean by: `{command}`",
+                "I understand these commands:",
+                "{validCommands}"
+            ]
+        ],
+
+        "help/control-channel": [
+            [
+                "This is my control channel. Any messages sent here will be parsed as commands. Access to this channel should be restricted.",
+                "**Commands:**",
+                "{commands}"
+            ]
+        ],
+
+        "admin/status": [
+            [ 
+                "There are {eligible} candidates."
+            ]
+        ]
+    }
+}
+
