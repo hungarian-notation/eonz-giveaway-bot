@@ -31,7 +31,7 @@ Before starting the bot for the first time, it needs to be configured.
     },
 
     ...
-}   
+}  
 ```
 
 Critically, you must supply it with a discord application token, and the following channel ids:
@@ -45,6 +45,10 @@ The bot doesn't care if the channels are in the same server, but you will need t
 See [these instructions](https://www.writebots.com/discord-bot-token/) for how to generate a token for your instance of the bot and add the bot to your server.
 
 See [support.discord.com](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-) for details on getting a channel id.
+
+## Optional Settings: Prefix
+
+By default, the bot uses `$` as its command prefix. You can change this by adjusting the `prefix` key in `config.json`.
 
 ## Optional Settings: Personality
 
@@ -80,7 +84,7 @@ Each phrase can have one or more variants, and each of those variants can be spl
 
 The bot only responds to one command via direct message:
 
-* `!register <username>` - Registers the discord user's minecraft username for the contest.
+* `$register <username>` - Registers the discord user's minecraft username for the contest.
 
 If the user sends anything else the bot will try to help them figure out how to express the command correctly.
 
@@ -88,9 +92,10 @@ If the user sends anything else the bot will try to help them figure out how to 
 
 The following control channel commands are supported:
 
-* `!say <message>` - sends a message to the public text channel
-* `!announce` - sends the contest announcement to the public text channel
-* `!status` - displays the current number of eligible contestants
-* `!draw <count>` - draw a number of winners, announcing it into general chat and sending them the server details
-* `!reset-discord-username <discord-username>` - reset the status of the named discord user
-* `!reset-discord-id <discord-id>` - Reset the status of the discord user with the given id. This is only needed in the unlikely case where two users have the same user name.
+* `$say <message>` - sends a message to the public text channel
+* `$announce` - sends the contest announcement to the public text channel
+* `$status` - displays the current number of eligible contestants
+* `$list <all|winners>` - displays the names of the winners, or all engaged users
+* `$draw <count>` - draw a number of winners, announcing it into general chat and sending them the server details
+* `$reset-discord-username <discord-username>` - reset the status of the named discord user
+* `$reset-discord-id <discord-id>` - Reset the status of the discord user with the given id. This is only needed in the unlikely case where two users have the same user name.
