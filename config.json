@@ -12,6 +12,7 @@
     "prefix": "$",
 
     "personality": {
+
         "announce": {            
             "embed": true,
             "title": "Join the Minecraft Event!",
@@ -28,6 +29,19 @@
             ],
             "timestamp": true
         },
+        
+        "alternative-announcement": {            
+            "embed": true,
+            "title": "Example!",
+            "content": [
+                "This is an example alternative announcement.",
+                "It can be triggered with the {prefix}say command in the control channel.",
+                "",
+                "DM <@{client_id}> with the following command to register:",
+                "`{prefix}register <your-minecraft-username>`"
+            ],
+            "timestamp": true
+        },
 
         "announce/winners": [
             [
@@ -38,6 +52,7 @@
         ],
 
         "announce/winners/name": "<@{discordId}>",
+
         "name/control": "Discord User **{discordUser}**, playing as **{minecraftUser}**; `discord_id={discordId}` ",
         
         "accept": [
@@ -59,6 +74,12 @@
         "reject/duplicate": [
             [ 
                 "Nice try, but you are already registered." 
+            ]
+        ],
+
+        "reject/inactive": [
+            [
+                "Sorry, but I'm not taking new registrations right now."
             ]
         ],
 
@@ -110,11 +131,26 @@
 
         "admin/status": [
             [ 
+                "Active/Inactive?: **{state}**",
                 "Total Users Engaged: {total}",
                 "Winners: {winners}",
                 "Eligible Candidates: {eligible}"
             ]
-        ]
+        ],
+        
+        "admin/starting": { 
+            "content": [
+                "I am now accepting registrations from users.",
+                "You can issue the `{prefix}stop` command to pause/stop registrations."
+            ]
+        },
+
+        "admin/stopping": { 
+            "content": [
+                "I am no longer registrations from users.",
+                "You can issue the `{prefix}start` command to resume registrations."
+            ]
+        }
     }
 }
 

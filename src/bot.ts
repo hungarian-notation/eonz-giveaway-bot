@@ -30,13 +30,19 @@ export class GatekeeperBot {
 
     private connected?:     Promise<any>;
 
+    private _state: GatekeeperBot.State;
+
     constructor(config: ConfigObject) {
         this.config = config;
+        this._state = GatekeeperBot.State.Inactive;
         this.personality = new Personality(config.personality);
         this.personality.defaults.prefix = this.config.prefix;        
         this.database = new GatekeeperDatabase(config);
         this.commands = [
             new Commands.RegisterCommand(),
+
+            new Commands.StartCommand(),
+            new Commands.StopCommand(),
             new Commands.SayCommand(),
             new Commands.AnnounceCommand(),
             new Commands.StatusCommand(),
@@ -45,6 +51,22 @@ export class GatekeeperBot {
             new Commands.ResetUsernameCommand(),
             new Commands.ResetIdCommand()
         ];
+    }
+
+    get state(): GatekeeperBot.State {
+        return this._state;
+    }
+
+    set state(state: GatekeeperBot.State) {
+        if (state != this._state) {
+            this._state = state;
+            if (state == GatekeeperBot.State.Active) {
+                // activating
+                this.sendControl("admin/starting");
+            } else if (state == GatekeeperBot.State.Inactive) {
+                this.sendControl("admin/stopping");
+            }
+        }
     }
 
     async connect() {    
@@ -191,6 +213,7 @@ export class GatekeeperBot {
 }
 
 export namespace GatekeeperBot {
+
     export abstract class Command {
         abstract get type(): CommandType;
         abstract get name(): string;
@@ -205,6 +228,10 @@ export namespace GatekeeperBot {
     export enum CommandType { 
         Admin, Public
     };
+
+    export enum State {
+        Inactive = 0, Active = 1
+    }
 }
 
 import * as Commands from "./commands";

@@ -20,6 +20,7 @@ export class StatusCommand extends GatekeeperBot.Command {
         let winners = users.filter(each => each.selected == true);
         
         bot.sendControl("admin/status", {
+            state: bot.state == GatekeeperBot.State.Active ? "Active" : "Inactive",
             eligible: candidates.length.toFixed(0),
             winners: winners.length.toFixed(0),
             total: users.length.toFixed(0)
