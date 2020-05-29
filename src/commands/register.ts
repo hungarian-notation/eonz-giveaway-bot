@@ -20,11 +20,15 @@ export class RegisterCommand extends GatekeeperBot.Command {
 
                 message.reply(bot.personality.get("accept", {
                     discordUser:    message.author.username,
+                    discordId:      message.author.id,
                     minecraftUser:  args
                 }))
             } else {
-                message.reply(bot.personality.get("reject/duplicate", {
+                await bot.database.register(message.author, args);
+
+                message.reply(bot.personality.get("accept/update", {
                     discordUser:    message.author.username,
+                    discordId:      message.author.id,
                     minecraftUser:  args
                 }))
             }

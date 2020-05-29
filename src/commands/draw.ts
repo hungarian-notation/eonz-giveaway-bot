@@ -25,13 +25,24 @@ export class DrawCommand extends GatekeeperBot.Command {
             await bot.sendControl(`drawing ${count} winners from ${candidates.length} candidates...`);
 
             let winners         = await bot.database.getWinners(count);
-            let winnersText     = winners.map(each => `**${each.discord.username}**`).join("\n");
+            
+            let winnersText     = winners.map(each => bot.personality.get("announce/winners/name", {
+                discordUser:    each.discord.username,
+                discordId:      each.discord.id,
+                minecraftUser:  each.minecraft.username
+            })).join("\n");
+
+            let controlText     = winners.map(each => bot.personality.get("name/control", {
+                discordUser:    each.discord.username,
+                discordId:      each.discord.id,
+                minecraftUser:  each.minecraft.username
+            })).join("\n");
 
             await bot.sendChat("announce/winners", { 
                 winners: winnersText
             });
 
-            await bot.sendControl(winnersText);
+            await bot.sendControl(controlText);
 
             for (var i = 0; i < winners.length; ++i) {
                 let next = winners[i];                

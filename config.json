@@ -9,18 +9,25 @@
 
     "db": "./giveaway.sqlite",
 
-    "personality": {
-        "announce": [
-            [
-                "Would you like to play a game?",
-                "DM me for more information."
-            ],
+    "prefix": "$",
 
-            [
-                "Do you have a death wish? Sign up for a chance to join our Minecraft server.",
-                "DM me for details!"
-            ]
-        ],
+    "personality": {
+        "announce": {            
+            "embed": true,
+            "title": "Join the Minecraft Event!",
+            "author": {
+                "name": "{client_username}",
+                "icon": "./cylon-teapot.png"
+            },
+            "content": [
+                "Would you like to play a game?",
+                "Register for a chance to join the minecraft server.",
+                "",
+                "DM <@{client_id}> with the following command to register:",
+                "`{prefix}register <your-minecraft-username>`"
+            ],
+            "timestamp": true
+        },
 
         "announce/winners": [
             [
@@ -29,33 +36,50 @@
                 "Check your DMs for instructions if you won."
             ]
         ],
+
+        "announce/winners/name": "<@{discordId}>",
+        "name/control": "Discord User **{discordUser}**, playing as **{minecraftUser}**; `discord_id={discordId}` ",
         
         "accept": [
             [
                 "Ok, **{discordUser}**, I have registered you in the contest under minecraft username: **{minecraftUser}**",
-                "I will message you again if you win, so stay tuned!"
+                "I will message you again if you win, so stay tuned!",
+                "",
+                "If that isn't the correct username, you can use the `{prefix}register` command again and I will update it!"
+            ]
+        ],
+
+        "accept/update": [
+            [
+                "Ok, I have updated your Minecraft username.",
+                "I now have it as: **{minecraftUser}**"
             ]
         ],
 
         "reject/duplicate": [
-            [ "Nice try, but you are already registered." ]
-        ],
-
-        "win": [
-            [
-                "Congratulations, you have been selected in the drawing.",
-                "Your minecraft account (**{minecraftUser}**) has been whitelisted. Please connect to: 192.168.420.420"
+            [ 
+                "Nice try, but you are already registered." 
             ]
         ],
 
-        "minecraft/whitelist": [
-            "/whitelist add {minecraftUser}"
+        "win": [
+            {
+                "content": [   
+                    "**Congratulations!**",
+                    "You have been selected in the drawing!",
+                    "",
+                    "Your minecraft account, **{minecraftUser}**, has been whitelisted.",
+                    "Please connect to out server at: `192.168.420.420`"
+                ]
+            }
         ],
+
+        "minecraft/whitelist": "/whitelist add {minecraftUser}",
 
         "help": [
             [
                 "Hello, **{discordUser}**!",
-                "To register for a chance to join the server, please reply: `!register <username>`",
+                "To register for a chance to join the server, please reply: `{prefix}register <username>`",
                 "It's important to register your Minecraft username so I can whitelist you if you win!"
             ]
         ],
@@ -63,8 +87,8 @@
         "help/missing-username": [
             [
                 "Close, but I need you to tell me your Minecraft username.",
-                "For example, if your minecraft username was **{discordUser}**, you would reply: `!register {discordUser}`",
-                "Alternatively, if your minecraft username was **YorkshireGold**, you would reply: `!register YorkshireGold`"
+                "For example, if your minecraft username was **{discordUser}**, you would reply: `{prefix}register {discordUser}`",
+                "Alternatively, if your minecraft username was **YorkshireGold**, you would reply: `{prefix}register YorkshireGold`"
             ]
         ],
 
@@ -86,7 +110,9 @@
 
         "admin/status": [
             [ 
-                "There are {eligible} candidates."
+                "Total Users Engaged: {total}",
+                "Winners: {winners}",
+                "Eligible Candidates: {eligible}"
             ]
         ]
     }

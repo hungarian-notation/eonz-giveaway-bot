@@ -2,9 +2,12 @@ import * as Discord from "discord.js";
 
 import { Personality, PersonalityConfig, Variables } from "./personality";
 import { GatekeeperDatabase, DatabaseConfig, Candidate } from "./database";
+import { logger } from "./logger";
+import chalk from "chalk";
 
 type ConfigObject = DatabaseConfig & {
     token: string;
+    prefix: string;
     channels: ChannelsObject;
     personality: PersonalityConfig;
     playerIdentities: string;
@@ -30,30 +33,29 @@ export class GatekeeperBot {
     constructor(config: ConfigObject) {
         this.config = config;
         this.personality = new Personality(config.personality);
+        this.personality.defaults.prefix = this.config.prefix;        
         this.database = new GatekeeperDatabase(config);
         this.commands = [
             new Commands.RegisterCommand(),
-
             new Commands.SayCommand(),
             new Commands.AnnounceCommand(),
             new Commands.StatusCommand(),
+            new Commands.ListCommand(),
             new Commands.DrawCommand(),
-
             new Commands.ResetUsernameCommand(),
             new Commands.ResetIdCommand()
         ];
     }
 
     async connect() {    
+        
         if (this.client != undefined) {
             return this.client;
         }
 
-        let client = new Discord.Client({ 
-            presence: { 
-                activity: { type: "WATCHING", name: "the chat and drinking tea." }
-            }
-        });
+        logger.log(`connecting...`);
+
+        let client = new Discord.Client();
 
         this.client = new Promise((resolve, reject) => {
             client.login(this.config.token).then(() => resolve(client), (e) => reject(e));         
@@ -67,7 +69,12 @@ export class GatekeeperBot {
             });
         });
         
-        this.client.then(() => {
+        this.client.then(() => {            
+            logger.log(`connected as: ${client.user?.username}#${client.user?.discriminator}`);
+
+            this.personality.defaults["client_username"] = client.user!.username;
+            this.personality.defaults["client_id"] = client.user!.id;
+
             this.onConnect();
         })
 
@@ -80,7 +87,7 @@ export class GatekeeperBot {
 
     private async onConnect() {
         let adminCommands
-        this.sendControl("help/control-channel", { commands: this.getCommands(GatekeeperBot.CommandType.Admin).map(each => each.getHelp()).join("\n") });
+        this.sendControl("help/control-channel", { commands: this.getCommands(GatekeeperBot.CommandType.Admin).map(each => each.getHelp(this)).join("\n") });
     }
 
     private async handleMessage(message: Discord.Message) {
@@ -102,26 +109,33 @@ export class GatekeeperBot {
         }
     }
 
-    private async send(id: "public" | "control" | "bridge", message: string | string[], options?: Variables) {
-        if (!Array.isArray(message)) {
-            message = this.personality.get(message, options || {});
+    private async send(id: "public" | "control" | "bridge", message: string | Discord.MessageEmbed, options?: Variables) {
+        if (typeof message == "string") {
+            message = this.personality.get(message, options || {}, false);
         }
 
-        let channel = await this.getTextChannel(this.config.channels[id]);        
-        return channel.send({
-            content: message.join("\n")
-        });
+        let channel = await this.getTextChannel(this.config.channels[id]);      
+
+        if (typeof message == "string" && message.length > 1950) {
+            console.log(`message exceeded character limit:`);
+            console.log(message);
+            await this.send("control", "***Warning:***" + "\n" + 
+            `A message that was directed towards the ${id} text channel was too long (${message.length} characters). ` +
+            `It has been written to my console output instead.`);
+        } else {
+            await channel.send(message);
+        }
     }
 
-    async sendChat(message: string | string[], options?: Variables) {
+    async sendChat(message: string, options?: Variables) {
         return this.send("public", message, options);
     }
 
-    async sendConsoleCommand(message: string | string[], options?: Variables) {
+    async sendConsoleCommand(message: string, options?: Variables) {
         return this.send("bridge", message, options);
     }
 
-    async sendControl(message: string | string[], options?: Variables) {
+    async sendControl(message: string, options?: Variables) {
         return this.send("control", message, options);
     }
 
@@ -132,14 +146,17 @@ export class GatekeeperBot {
         if (matched) {
             return matched.exec(this, message, command, args);
         } else {
-            let validCommands = allowed.map(each => `\`!${each.name}\``).join(", ");
+            let validCommands = allowed.map(each => `\`${this.config.prefix}${each.name}\``).join(", ");
             return message.reply(this.personality.get("help/unknown-command", { command, validCommands }));
         }
     }
 
     tryCommand(scope: GatekeeperBot.CommandType, message: Discord.Message) {
-        const COMMAND_PATTERN   = /^[!]([a-zA-Z-]+)(?: (.*))?$/;
-        let matchedCommand      = COMMAND_PATTERN.exec(message.content);
+        const COMMAND_PATTERN   = /^([a-zA-Z-]+)(?: (.*))?$/;
+
+        let prefixed = message.content.startsWith(this.config.prefix) ? message.content.slice(this.config.prefix.length) : undefined;
+        let matchedCommand = prefixed ? COMMAND_PATTERN.exec(prefixed) : undefined;
+
         if (matchedCommand) {        
             let command = matchedCommand[1];
             let args = matchedCommand[2];
@@ -150,12 +167,14 @@ export class GatekeeperBot {
     }
 
     async handleDirectMessage(message: Discord.Message) { 
+        logger.verbose(chalk.blueBright(`direct message: `) + `${message.author.username}: ${message.content}`);
         if (!this.tryCommand(GatekeeperBot.CommandType.Public, message)) {        
             message.reply(this.personality.get("help", { discordUser: message.author.username }));
         }
     }
 
     private async handleControlMessage(message: Discord.Message) {
+        logger.verbose(chalk.greenBright(`control message: `) + `${message.author.username}: ${message.content}`);
         this.tryCommand(GatekeeperBot.CommandType.Admin, message);
     }
 
@@ -178,8 +197,8 @@ export namespace GatekeeperBot {
         abstract get help(): { arg?: string, description: string };
         abstract exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any>;
         
-        getHelp(): string {
-            return `\`!${this.name + (this.help.arg ? ` <${this.help.arg}>` : "")}\` - *${this.help.description}*`
+        getHelp(bot: GatekeeperBot): string {
+            return `\`${bot.config.prefix}${this.name + (this.help.arg ? ` <${this.help.arg}>` : "")}\` - *${this.help.description}*`
         }
     }    
 
@@ -189,3 +208,4 @@ export namespace GatekeeperBot {
 }
 
 import * as Commands from "./commands";
+import { type } from "os";

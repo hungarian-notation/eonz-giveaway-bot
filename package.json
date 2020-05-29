@@ -20,6 +20,7 @@
     },
     "dependencies": {
         "@types/string-template": "^1.0.2",
+        "chalk": "^4.0.0",
         "discord.js": "^12.2.0",
         "sqlite": "^4.0.9",
         "sqlite3": "^4.2.0",

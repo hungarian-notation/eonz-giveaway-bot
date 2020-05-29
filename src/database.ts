@@ -53,11 +53,20 @@ export class GatekeeperDatabase {
         } else {
             let connection = await this.getConnection();
             await connection.exec(`
-                INSERT INTO users 
+                INSERT OR REPLACE INTO users 
                     ( discord_id, discord_username, minecraft_username, registered_timestamp )
                 VALUES
                     ( "${user.id}", "${user.username}", "${minecraftUser}", ${Date.now()} )`)
         }
+    }
+
+    async all(): Promise<(Candidate & { selected: boolean })[]> {
+        let candidates = await (await this.getConnection()).all("SELECT discord_id, discord_username, minecraft_username, selected FROM users");
+        return candidates.map(each => ({
+            discord: { id: each.discord_id, username: each.discord_username },
+            minecraft: { username: each.minecraft_username },
+            selected: each.selected > 0
+        }));
     }
 
     async getCandidates(): Promise<Candidate[]> {
