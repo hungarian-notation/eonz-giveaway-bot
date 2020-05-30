@@ -103,6 +103,10 @@ export class GatekeeperBot {
         return this.client;
     }
 
+    async disconnect() {
+        
+    }
+
     private getCommands(scope: GatekeeperBot.CommandType) {
         return this.commands.filter(each => each.type == scope);
     }

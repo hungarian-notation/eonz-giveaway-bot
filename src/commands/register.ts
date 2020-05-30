@@ -41,22 +41,26 @@ export class RegisterCommand extends GatekeeperBot.Command {
 
                 let registered = await bot.database.isRegistered(message.author);
 
-                if (!registered) {
-                    await bot.database.register(message.author, args);
-
-                    await message.reply(bot.personality.get("accept", {
-                        discordUser:    message.author.username,
-                        discordId:      message.author.id,
-                        minecraftUser:  args
-                    }))
-                } else {
-                    await bot.database.register(message.author, args);
-
-                    await  message.reply(bot.personality.get("accept/update", {
-                        discordUser:    message.author.username,
-                        discordId:      message.author.id,
-                        minecraftUser:  args
-                    }))
+                try {
+                    if (!registered) {
+                        await bot.database.register(message.author, args);
+                        await message.reply(bot.personality.get("accept", {
+                            discordUser:    message.author.username,
+                            discordId:      message.author.id,
+                            minecraftUser:  args
+                        }))
+                    } else {
+                        await bot.database.register(message.author, args, true);
+                        await  message.reply(bot.personality.get("accept/update", {
+                            discordUser:    message.author.username,
+                            discordId:      message.author.id,
+                            minecraftUser:  args
+                        }))
+                    }
+                } catch (e) {
+                    if (e.message == "error/duplicate-username") {
+                        message.reply(bot.personality.get("error/duplicate-username"));
+                    }
                 }
             } else {
                 await message.reply(bot.personality.get("help/missing-username", {

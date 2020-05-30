@@ -10,7 +10,7 @@ export class DrawCommand extends GatekeeperBot.Command {
     };
     
     async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        let candidates = await bot.database.getCandidates();
+        let candidates = await bot.database.candidates();
         let count = Math.max(Number(args ?? "1"));        
 
         if (isNaN(count) || count < 0) {
@@ -24,7 +24,7 @@ export class DrawCommand extends GatekeeperBot.Command {
         if (count > 0) {
             await bot.sendControl(`drawing ${count} winners from ${candidates.length} candidates...`);
 
-            let winners         = await bot.database.getWinners(count);
+            let winners         = await bot.database.selectWinners(count);
             
             let winnersText     = winners.map(each => bot.personality.get("announce/winners/name", {
                 discordUser:    each.discord.username,

@@ -25,6 +25,10 @@ const argv = yargs
         alias: "t",
         type: "string",
         description: "specifes an external file containing the application token to use for the bot"
+    })
+    .option("start", {
+        type: "boolean",
+        description: "starts the bot in active mode"
     }).argv;
 
 if (argv.verbose) {
@@ -42,4 +46,35 @@ if (argv.token) {
 
 let bot = new GatekeeperBot(config);
 
+if (argv.start) {
+    bot.state = GatekeeperBot.State.Active;
+}
+
 bot.connect();
+
+process.stdin.resume();
+
+function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode: number = 0) {
+    if (options.cleanup) {
+        (async () => {
+            console.log("closing sqlite connection...");
+            await bot.database.activeConnection?.close();
+            console.log("sqlite connection closed.")
+            if (options.exit) process.exit(exitCode);
+        })();
+    } else {
+        if (options.exit) process.exit(exitCode);        
+    }
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null,   { exit: true }));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, { cleanup: true, exit: true }));
+// catches "kill pid" (for example: nodemon restart)
+process.on('SIGUSR1', exitHandler.bind(null, { exit:true }));
+process.on('SIGUSR2', exitHandler.bind(null, { exit:true }));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
