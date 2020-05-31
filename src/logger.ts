@@ -1,7 +1,9 @@
 
 
 export interface LoggerInterface {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     log(...data: any[]):        void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     error(...data: any[]):      void;
 }
 
@@ -19,19 +21,19 @@ export class Logger {
         this.level = level
     }
 
-    error(...data: any[]): void {
+    error(...data: unknown[]): void {
         if (this.level >= LogLevel.ERROR) {
             this.provider.error(...data);
         }
     }
 
-    log(...data: any[]): void {
+    log(...data: unknown[]): void {
         if (this.level >= LogLevel.INFO) {
             this.provider.log(...data);
         }
     }
 
-    verbose(...data: any[]): void {
+    verbose(...data: unknown[]): void {
         if (this.level >= LogLevel.VERBOSE) {
             this.provider.log(...data);
         }

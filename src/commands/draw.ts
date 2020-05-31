@@ -9,8 +9,8 @@ export class DrawCommand extends GatekeeperBot.Command {
         description: "draw a number of winners, announcing it into general chat and sending them the server details"
     };
     
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        let candidates = await bot.database.candidates();
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
+        const candidates = await bot.database.candidates();
         let count = Math.max(Number(args ?? "1"));        
 
         if (isNaN(count) || count < 0) {
@@ -24,15 +24,15 @@ export class DrawCommand extends GatekeeperBot.Command {
         if (count > 0) {
             await bot.sendControl(`drawing ${count} winners from ${candidates.length} candidates...`);
 
-            let winners         = await bot.database.selectWinners(count);
+            const winners         = await bot.database.selectWinners(count);
             
-            let winnersText     = winners.map(each => bot.personality.get("announce/winners/name", {
+            const winnersText     = winners.map(each => bot.personality.get("announce/winners/name", {
                 discordUser:    each.discord.username,
                 discordId:      each.discord.id,
                 minecraftUser:  each.minecraft.username
             })).join("\n");
 
-            let controlText     = winners.map(each => bot.personality.get("name/control", {
+            const controlText     = winners.map(each => bot.personality.get("name/control", {
                 discordUser:    each.discord.username,
                 discordId:      each.discord.id,
                 minecraftUser:  each.minecraft.username
@@ -44,8 +44,8 @@ export class DrawCommand extends GatekeeperBot.Command {
 
             await bot.sendControl(controlText);
 
-            for (var i = 0; i < winners.length; ++i) {
-                let next = winners[i];                
+            for (let i = 0; i < winners.length; ++i) {
+                const next = winners[i];                
                 await bot.giveRewardsTo(next);
             }
         } else {

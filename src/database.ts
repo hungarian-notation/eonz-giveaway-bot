@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3'
 import { Database, open } from 'sqlite'
 import * as Discord from "discord.js";
 import { logger } from "./logger";
+import { isErrorObject } from './util';
  
 export type DatabaseConfig = {
     db: string
@@ -14,10 +15,10 @@ export type Candidate = {
     minecraft: { username: string }
 }
 
-function parseSqlError(e: any) {
+function parseSqlError(e: unknown) {
     const pattern = /^([A-Z_]+)[:] (.*)$/;
-    if (typeof e === "object" && ("message" in e)) {
-        let result = pattern.exec(e.message);
+    if (isErrorObject(e)) {
+        const result = pattern.exec(e.message);
 
         if (result) {
             return {
@@ -35,19 +36,23 @@ function parseSqlError(e: any) {
 export class GatekeeperDatabase {
     config: DatabaseConfig;
     private connection?: Promise<Connection>;
-    activeConnection?: Connection;
+    private activeConnection?: Connection;
 
     constructor(config: DatabaseConfig) {
         this.config = config;
     }
 
+    async close(): Promise<void> {
+        if (this.activeConnection) {
+            await this.activeConnection.close();
+        }
+    }   
+
     private async open(): Promise<Connection> {
-        let connection = await open({
+        const connection = await open({
           filename: this.config.db,
           driver: sqlite3.Database
         });
-
-        connection.serialize
 
         await connection.exec(`
             CREATE TABLE IF NOT EXISTS "users" (
@@ -81,26 +86,31 @@ export class GatekeeperDatabase {
         return connection;
     }
 
-    async isRegistered(user: Discord.User) {
-        let id              = user.id;
-        let connection      = await this.getConnection();
-        let result          = await connection.all(`SELECT discord_username FROM users WHERE discord_id = "${id}"`); 
+    async isRegistered(user: Discord.User): Promise<boolean> {
+        const id              = user.id;
+        const connection      = await this.getConnection();
+        const statement       = await connection.prepare("SELECT discord_username FROM users WHERE discord_id = ?");
+        const result          = await statement.all(id); 
+        await statement.finalize();
         return result.length > 0;
     }
 
-    async register(user: Discord.User, minecraftUser: string, update: boolean = false) {
-        if (!update && await this.isRegistered(user)) {
+    async register(user: Discord.User, minecraftUser: string, update = false): Promise<boolean> {
+        if (!update && (await this.isRegistered(user))) {
             return false;
         } else {
-            let connection = await this.getConnection();
+            const connection = await this.getConnection();
 
-            let result = await connection.run(`
+            const statement = await connection.prepare(`
                 INSERT OR REPLACE INTO users 
                     ( discord_id, discord_username, minecraft_username )
                 VALUES
-                    ( "${user.id}", "${user.username}", "${minecraftUser}" )`)
+                   ( ?, ?, ? )
+            `);
+
+            const result = await statement.run(user.id, user.username, minecraftUser)            
             .catch(e => {
-                let err = parseSqlError(e);
+                const err = parseSqlError(e);
 
                 if (err && err.detail) {
                     throw new Error(err.detail);
@@ -109,69 +119,93 @@ export class GatekeeperDatabase {
                 }
             });
 
+            await statement.finalize();
             logger.verbose(result);
+            return true;
         }
     }
 
     async all(): Promise<(Candidate & { selected: boolean })[]> {
-        let candidates = await (await this.getConnection()).all("SELECT discord_id, discord_username, minecraft_username, selected FROM users");
-        return candidates.map(each => ({
-            discord: { id: each.discord_id, username: each.discord_username },
-            minecraft: { username: each.minecraft_username },
-            selected: each.selected > 0
-        }));
+        const candidates = await (await this.getConnection()).all("SELECT discord_id, discord_username, minecraft_username, selected FROM users");
+        return candidates.map(each => {
+            // row format is provable from SQL
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const row: { discord_id: string, discord_username: string, minecraft_username: string, selected: number } = each;
+
+            return {
+                discord: { id: row.discord_id, username: row.discord_username },
+                minecraft: { username: row.minecraft_username },
+                selected: row.selected > 0
+            }
+        });
     }
 
     async candidates(): Promise<Candidate[]> {
-        let candidates = await (await this.getConnection()).all("SELECT discord_id, discord_username, minecraft_username FROM users WHERE selected = FALSE");
-        return candidates.map(each => ({
-            discord: { id: each.discord_id, username: each.discord_username },
-            minecraft: { username: each.minecraft_username }
-        }));
+        const candidates = await (await this.getConnection()).all("SELECT discord_id, discord_username, minecraft_username FROM users WHERE selected = FALSE");
+        return candidates.map(each => {            
+            // row format is provable from SQL
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const row: { discord_id: string, discord_username: string, minecraft_username: string } = each;
+
+            return {
+                discord: { id: row.discord_id, username: row.discord_username },
+                minecraft: { username: row.minecraft_username }
+        }});
     }
 
     private async setSelected(candidates: Candidate[]) {
-        let connection = await this.getConnection();
+        const connection = await this.getConnection();
         return await Promise.all(candidates.map(async each => {
-            let sql = `UPDATE users SET selected = TRUE WHERE discord_id = ${each.discord.id}`;
-            return await connection.exec(sql);
+            const statement =  await connection.prepare(`UPDATE users SET selected = TRUE WHERE discord_id = ?`);
+            const result = await statement.run();
+            await statement.finalize();
+            return result;
         }));
     }
 
-    async selectWinners(count: number) {
-        let candidates: Candidate[] = await this.candidates();
-        let winners = [];
-        let i_max = Math.min(count, candidates.length);
+    async selectWinners(count: number): Promise<(Candidate & { selected: true })[]> {
+        const candidates: Candidate[] = await this.candidates();
+        const winners = [];
+        const i_max = Math.min(count, candidates.length);
 
-        for (var i = 0 ; i < i_max; ++i) {
-            let j = Math.floor(Math.random() * candidates.length);
-            let winner = candidates[j];
+        for (let i = 0 ; i < i_max; ++i) {
+            const j = Math.floor(Math.random() * candidates.length);
+            const winner = candidates[j];
             candidates.splice(j, 1)[0];
             winners.push(winner);
         }
 
-        this.setSelected(winners);
+        await this.setSelected(winners);
 
-        return winners;
+        return winners.map(each => {
+            const transformed = Object.assign({}, each, { selected: true } as { selected: true });
+            return transformed
+        });
     }
 
-    async resetUser(where: { discord: { username: string } } | { discord: { id: string } }) {
-        var sql;
+    async resetUser(where: { discord: { username: string } } | { discord: { id: string } }): Promise<unknown> {
+        let sql;
+        let value;
 
         if ("id" in where.discord) {
-            let id = where.discord.id;
-            sql = `DELETE FROM users WHERE discord_id = "${id}"`
+            const id = where.discord.id;
+            sql = `DELETE FROM users WHERE discord_id = ?`
+            value = id;
         } else {
-            let username = where.discord.username;
-            sql = `DELETE FROM users WHERE discord_username = "${username}"`
+            const username = where.discord.username;
+            sql = `DELETE FROM users WHERE discord_username = ?`
+            value = username;
         }
 
-        let db = await this.getConnection();
-        return await db.run(sql);
+        const db = await this.getConnection();
+        const statement = await db.prepare(sql);
+
+        const result = await statement.run(value);
+        await statement.finalize();
+        return result;
     }
 
     async getConnection(): Promise<Connection> {
         return this.connection ?? (this.connection = this.open());
     }
-
 }

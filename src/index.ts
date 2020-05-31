@@ -7,6 +7,9 @@ import { Database } from "sqlite";
 
 import yargs from "yargs";
 import { logger, LogLevel } from "./logger";
+import { ConfigObject } from "./config";
+import { RecursivePartial } from "./util";
+import { default as json5 } from "json5";
 
 const argv = yargs
     .help("h").alias("h", "help")
@@ -35,8 +38,10 @@ if (argv.verbose) {
     logger.level = LogLevel.VERBOSE;
 }
 
-const configSource  =   fs.readFileSync(argv.config, { encoding: "utf8" });
-const config        =   JSON.parse(configSource);
+const configSource = fs.readFileSync(argv.config, { encoding: "utf8" });
+
+
+const config = json5.parse(configSource) as RecursivePartial<ConfigObject>;
 
 if (argv.token) {
     const data = fs.readFileSync(argv.token, { encoding: "utf8" });
@@ -44,22 +49,22 @@ if (argv.token) {
     logger.log("using specified token file: " + argv.token);
 }
 
-let bot = new GatekeeperBot(config);
+const bot = new GatekeeperBot(config);
 
 if (argv.start) {
-    bot.state = GatekeeperBot.State.Active;
+    void bot.setState(GatekeeperBot.State.Active);
 }
 
-bot.connect();
+void bot.connect();
 
 process.stdin.resume();
 
-function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode: number = 0) {
+function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode = 0) {
     if (options.cleanup) {
-        (async () => {
-            console.log("closing sqlite connection...");
-            await bot.database.activeConnection?.close();
-            console.log("sqlite connection closed.")
+        void (async () => {
+            logger.log("closing sqlite connection...");
+            await bot.disconnect();
+            logger.log("sqlite connection closed.")
             if (options.exit) process.exit(exitCode);
         })();
     } else {
@@ -67,14 +72,15 @@ function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode: n
     }
 }
 
-//do something when app is closing
-process.on('exit', exitHandler.bind(null,   { exit: true }));
+bot.ondisconnect = () => exitHandler({ exit: true }, 0);
 
-//catches ctrl+c event
-process.on('SIGINT', exitHandler.bind(null, { cleanup: true, exit: true }));
-// catches "kill pid" (for example: nodemon restart)
-process.on('SIGUSR1', exitHandler.bind(null, { exit:true }));
-process.on('SIGUSR2', exitHandler.bind(null, { exit:true }));
+process.on('exit',      exitHandler.bind(null, { exit: true }));
+process.on('SIGINT',    exitHandler.bind(null, { cleanup: true, exit: true }));
+process.on('SIGUSR1',   exitHandler.bind(null, { exit:true }));
+process.on('SIGUSR2',   exitHandler.bind(null, { exit:true }));
 
 //catches uncaught exceptions
-process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
+process.on('uncaughtException', (e) => {
+    logger.error(e);
+    exitHandler({exit:true}, 1);
+});

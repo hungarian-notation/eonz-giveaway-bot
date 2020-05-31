@@ -9,12 +9,12 @@ export class ResetUsernameCommand extends GatekeeperBot.Command {
         description: "reset the status of the named discord user"
     };
     
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
         if (!args) {
-            bot.sendControl("missing username")
+            await bot.sendControl("missing username")
         } else {
-            let result = await bot.database.resetUser({ discord: { username: args }})
-            return await bot.sendControl(String(JSON.stringify(result) ?? "null"));
+            const result = await bot.database.resetUser({ discord: { username: args }})
+            return await bot.sendJson("control", { result: result });
         }
     }
 }
@@ -27,12 +27,12 @@ export class ResetIdCommand extends GatekeeperBot.Command {
         description: "reset the status of the discord user with the given id"
     };
     
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
         if (!args) {
-            bot.sendControl("missing user id")
+            await bot.sendControl("missing user id")
         } else {
-            let result = await bot.database.resetUser({ discord: { id: args }})
-            return await bot.sendControl(String(JSON.stringify(result) ?? "null"));
+            const result = await bot.database.resetUser({ discord: { id: args }})
+            return await bot.sendJson("control", { result: result });
         }
     }
 }

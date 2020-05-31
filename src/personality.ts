@@ -4,33 +4,13 @@ import * as path from "path";
 import * as Discord from "discord.js";
 import { logger } from "./logger";
 import chalk from "chalk";
+import { PersonalityEntryOptions, MessageTemplateObject, EmbedMessageTemplate, PersonalityConfig } from "./config";
 
 export type Variables = { [key: string]: string };
 
-export type MessageTemplateObject = {
-    content:    string[];
-};
-
-export type EmbedMessageTemplate = (MessageTemplateObject & {
-    embed:      true;
-    color?:     string;
-    title?:     string;
-    url?:       string;
-    author?:    { 
-        name: string,
-        icon: string
-    },
-    image?: string;
-    timestamp?: boolean;
-});
-
-export type PersonalityEntry            = string[] | MessageTemplateObject | EmbedMessageTemplate;
-export type PersonalityEntryOptions     = string | PersonalityEntry | PersonalityEntry[];
-export type PersonalityConfig           = { [key: string]: PersonalityEntryOptions }
-
-export function isStringArray(value: any): value is string[] {
+export function isStringArray(value: unknown): value is string[] {
     if (Array.isArray(value)) {
-        for (var i = 0; i < value.length; ++i) {
+        for (let i = 0; i < value.length; ++i) {
             if (typeof value[i] != "string") {
                 return false;
             }
@@ -50,7 +30,7 @@ function normalize(entry: PersonalityEntryOptions): (MessageTemplateObject | Emb
         entry = { content: entry };
     }
 
-    var normalized: (MessageTemplateObject | EmbedMessageTemplate)[];
+    let normalized: (MessageTemplateObject | EmbedMessageTemplate)[];
 
     if (!Array.isArray(entry)) {
         normalized = [ entry ] as (MessageTemplateObject | EmbedMessageTemplate)[];
@@ -80,13 +60,13 @@ export class Personality {
     get(id: string, values: Variables): string;
     get(id: string, values: Variables, simple: true): string;
     get(id: string, values: Variables, simple: false): string | Discord.MessageEmbed;
-    get(id: string, values?: Variables, simple: boolean = true) {
+    get(id: string, values?: Variables, simple = true): string | Discord.MessageEmbed {
         values = Object.assign({}, this.defaults, values);
 
         logger.verbose(`expanding: ${id}`);
 
-        var entry = normalize(this.config[id] ?? id);
-        let selected: MessageTemplateObject | EmbedMessageTemplate = entry[Math.floor(Math.random() * entry.length)];
+        const entry = normalize(this.config[id] ?? id);
+        const selected: MessageTemplateObject | EmbedMessageTemplate = entry[Math.floor(Math.random() * entry.length)];
 
         logger.verbose(`selected:`);
         logger.verbose(entry);
@@ -97,7 +77,7 @@ export class Personality {
         function compile(input: string | string[]) {
             if (!Array.isArray(input)) {
                 input = [ input ];
-            };
+            }
 
             return input.map(each => {
                 if (typeof each !== "string") {
@@ -114,7 +94,7 @@ export class Personality {
         if (simple || Array.isArray(selected) || typeof selected == "string" || !("embed" in selected)) {
             return compile(selected.content);
         } else {
-            var message = new Discord.MessageEmbed();
+            let message = new Discord.MessageEmbed();
 
             if (selected.color) {
                 message = message.setColor(selected.color);
@@ -134,8 +114,8 @@ export class Personality {
                 if (selected.author.icon.startsWith("http")) {
                     message = message.setAuthor(compile(selected.author.name), selected.author.icon);
                 } else {            
-                    let iconPath = path.normalize(selected.author.icon);
-                    let iconName = path.basename(iconPath);
+                    const iconPath = path.normalize(selected.author.icon);
+                    const iconName = path.basename(iconPath);
                     message = message.setAuthor(compile(selected.author.name), `attachment://${iconName}`);
                     message = message.attachFiles([ iconPath ]);
                 }

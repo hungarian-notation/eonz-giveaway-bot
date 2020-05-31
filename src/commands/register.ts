@@ -1,5 +1,7 @@
+
 import * as Discord from "discord.js";
 import { GatekeeperBot } from "../bot";
+import { isErrorObject } from "../util";
 
 export class StartCommand extends GatekeeperBot.Command {
     type = GatekeeperBot.CommandType.Admin;
@@ -8,8 +10,8 @@ export class StartCommand extends GatekeeperBot.Command {
         description: "causes the bot to start accepting registrations"
     };
 
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        bot.state = GatekeeperBot.State.Active;
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
+        await bot.setState(GatekeeperBot.State.Active);
     }
 }
 
@@ -20,11 +22,10 @@ export class StopCommand extends GatekeeperBot.Command {
         description: "causes the bot to stop accepting registrations"
     };
 
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        bot.state = GatekeeperBot.State.Inactive;
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
+        await bot.setState(GatekeeperBot.State.Inactive);
     }
 }
-
 
 export class RegisterCommand extends GatekeeperBot.Command {
     type = GatekeeperBot.CommandType.Public;
@@ -34,12 +35,12 @@ export class RegisterCommand extends GatekeeperBot.Command {
         description: "registers a user"
     };
     
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
         if (bot.state == GatekeeperBot.State.Active) {
             if (args) {
                 // console.log(`register: discord user: ${message.author.username} minecraft user: ${args}`);
 
-                let registered = await bot.database.isRegistered(message.author);
+                const registered = await bot.database.isRegistered(message.author);
 
                 try {
                     if (!registered) {
@@ -58,8 +59,8 @@ export class RegisterCommand extends GatekeeperBot.Command {
                         }))
                     }
                 } catch (e) {
-                    if (e.message == "error/duplicate-username") {
-                        message.reply(bot.personality.get("error/duplicate-username"));
+                    if (isErrorObject(e) && e.message == "error/duplicate-username") {
+                        await message.reply(bot.personality.get("error/duplicate-username"));
                     }
                 }
             } else {

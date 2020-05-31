@@ -1,5 +1,6 @@
 {
-    "token": "",
+    // you must specify an api token here, or via the command line option --token
+    // "token": "",
 
     "channels": {
         "public":   "715311307334877278",
@@ -7,9 +8,11 @@
         "bridge":   "715369272175493172"
     },
 
-    "db": "./giveaway.sqlite",
+    // uncomment the following to specify a custom database path
+    // "db": "./db.sqlite",
 
-    "prefix": "$",
+    // uncomment the following to specify a custom command prefix
+    // "prefix": "$",
 
     "personality": {
 
@@ -150,7 +153,9 @@
                 "I am no longer registrations from users.",
                 "You can issue the `{prefix}start` command to resume registrations."
             ]
-        }
+        },
+
+        "debug/malformed-text-entry": { "content": { "error": "this is an invalid text entry used to trigger error handling code" } }
     }
 }
 

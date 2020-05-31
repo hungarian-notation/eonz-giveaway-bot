@@ -7,22 +7,21 @@ export class SayCommand extends GatekeeperBot.Command {
     name = "say";
     help = { arg: "message", description: "sends a message to the public text channel" }
 
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
         if (args) {
             await bot.sendChat(args);
-            bot.sendControl("message sent.");
+            await bot.sendControl("message sent.");
         }
     }
 }
 
 export class AnnounceCommand extends GatekeeperBot.Command {
-
     type = GatekeeperBot.CommandType.Admin;
     name = "announce";
     help = { description: "sends the contest announcement to the public text channel" }
 
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
         await bot.sendChat("announce");
-        bot.sendControl("announcement sent.");
+        await bot.sendControl("announcement sent.");
     }
 }

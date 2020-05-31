@@ -14,12 +14,12 @@ export class StatusCommand extends GatekeeperBot.Command {
     help = { description: "displays the current number of eligible contestants" }
 
 
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        let users = await bot.database.all();
-        let candidates = users.filter(each => each.selected == false);
-        let winners = users.filter(each => each.selected == true);
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
+        const users = await bot.database.all();
+        const candidates = users.filter(each => each.selected == false);
+        const winners = users.filter(each => each.selected == true);
         
-        bot.sendControl("admin/status", {
+        await bot.sendControl("admin/status", {
             state: bot.state == GatekeeperBot.State.Active ? "Active" : "Inactive",
             eligible: candidates.length.toFixed(0),
             winners: winners.length.toFixed(0),
@@ -30,25 +30,22 @@ export class StatusCommand extends GatekeeperBot.Command {
 }
 
 export class ListCommand extends GatekeeperBot.Command {
-
     type = GatekeeperBot.CommandType.Admin;
     name = "list";
     help = { arg: "all|winners", description: "displays the names of the winners, or all engaged users" }
 
-
-    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<any> {
-        let users = await bot.database.all();
-        let candidates = users.filter(each => each.selected == false);
-        let winners = users.filter(each => each.selected == true);
+    async exec(bot: GatekeeperBot, message: Discord.Message, command: string, args: string | undefined): Promise<void> {
+        const users = await bot.database.all();
+        const candidates = users.filter(each => each.selected == false);
+        const winners = users.filter(each => each.selected == true);
         
         if (args == "winners") {
-            let winnersListing = winners.map(each => candidateToString(each)).join("\n");
-            bot.sendControl("**Winners:**\n" + winnersListing);
+            const winnersListing = winners.map(each => candidateToString(each)).join("\n");
+            await bot.sendControl("**Winners:**\n" + winnersListing);
         } else if (args == "all") {
-            let winnersListing = winners.map(each => candidateToString(each)).join("\n");
-            let candidatesListing = candidates.map(each => candidateToString(each)).join("\n");
-            bot.sendControl("**Winners:**\n" + winnersListing + "\n**Candidates:**\n" + candidatesListing);
+            const winnersListing = winners.map(each => candidateToString(each)).join("\n");
+            const candidatesListing = candidates.map(each => candidateToString(each)).join("\n");
+            await bot.sendControl("**Winners:**\n" + winnersListing + "\n**Candidates:**\n" + candidatesListing);
         }
     }
-
 }
