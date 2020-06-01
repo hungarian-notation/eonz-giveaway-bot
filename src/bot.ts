@@ -50,6 +50,7 @@ export class GatekeeperBot {
             new Commands.ResetUsernameCommand(),
             new Commands.ResetIdCommand(),
 
+            new Commands.HelpCommand(),
             new Commands.ShutdownCommand()
         ];
     }
@@ -133,6 +134,10 @@ export class GatekeeperBot {
     }
 
     private async onConnect(): Promise<void> {
+        await this.sendHelp();
+    }
+
+    async sendHelp(): Promise<void> {
         await this.sendControl("help/control-channel", {
             commands: this.getCommands(GatekeeperBot.CommandType.Admin).map(each => each.getHelp(this)).join("\n") 
         });
@@ -260,7 +265,7 @@ export class GatekeeperBot {
         }));
     }
 
-    private _errorState: boolean = false;
+    private _errorState = false;
 
     async error(e: ErrorObject, recoverable: boolean): Promise<void> {
         const message = new Discord.MessageEmbed()

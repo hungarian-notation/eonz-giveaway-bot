@@ -157,6 +157,7 @@ export class GatekeeperDatabase {
         const connection = await this.getConnection();
         return await Promise.all(candidates.map(async each => {
             const statement =  await connection.prepare(`UPDATE users SET selected = TRUE WHERE discord_id = ?`);
+            await statement.bind(each.discord.id);
             const result = await statement.run();
             await statement.finalize();
             return result;
