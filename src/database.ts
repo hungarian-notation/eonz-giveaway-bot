@@ -56,10 +56,10 @@ export class GatekeeperDatabase {
 
         await connection.exec(`
             CREATE TABLE IF NOT EXISTS "users" (
-                "discord_id"			TEXT NOT NULL PRIMARY KEY UNIQUE,
-                "discord_username"		INTEGER NOT NULL,
-                "minecraft_username"	TEXT NOT NULL,
-                "selected"				BOOLEAN DEFAULT FALSE
+                discord_id			    TEXT    NOT NULL PRIMARY KEY UNIQUE,
+                discord_username		INTEGER NOT NULL,
+                minecraft_username	    TEXT    NOT NULL,
+                selected				BOOLEAN DEFAULT FALSE
             );
 
             /* DROP TRIGGER IF EXISTS prevent_duplicate_username_on_insert; */
@@ -86,6 +86,14 @@ export class GatekeeperDatabase {
         return connection;
     }
 
+    async purge(): Promise<{ changes: number }> {
+        const connection = await this.getConnection();
+        const statement = await connection.prepare("DELETE FROM users WHERE selected = false");
+        const result = await statement.run();
+        await statement.finalize();
+        return { changes: result.changes ?? 0 };
+    }
+
     async isRegistered(user: Discord.User): Promise<boolean> {
         const id              = user.id;
         const connection      = await this.getConnection();
@@ -108,7 +116,7 @@ export class GatekeeperDatabase {
                    ( ?, ?, ? )
             `);
 
-            const result = await statement.run(user.id, user.username, minecraftUser)            
+            const result = await statement.run(user.id, user.username, minecraftUser.toLowerCase())            
             .catch(e => {
                 const err = parseSqlError(e);
 

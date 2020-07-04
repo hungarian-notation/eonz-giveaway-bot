@@ -13,6 +13,11 @@ import { default as json5 } from "json5";
 
 const argv = yargs
     .help("h").alias("h", "help")
+    .option("purge", {
+        alias: "p",
+        type: "boolean",
+        description: "purge the registrations of non-winning users, requiring them to re-register for subsequent drawings"
+    })
     .option("config", {
         alias: "c",
         default: "./config.json",
@@ -34,53 +39,77 @@ const argv = yargs
         description: "starts the bot in active mode"
     }).argv;
 
-if (argv.verbose) {
-    logger.level = LogLevel.VERBOSE;
-}
+function main() {
 
-const configSource = fs.readFileSync(argv.config, { encoding: "utf8" });
+    if (argv.verbose) {
+        logger.level = LogLevel.VERBOSE;
+    }
 
+    const configSource = fs.readFileSync(argv.config, { encoding: "utf8" });
+    const config = json5.parse(configSource) as RecursivePartial<ConfigObject>;
 
-const config = json5.parse(configSource) as RecursivePartial<ConfigObject>;
+    if (argv.token) {
+        const data = fs.readFileSync(argv.token, { encoding: "utf8" });
+        config.token = data.trim();
+        logger.log("using specified token file: " + argv.token);
+    }
 
-if (argv.token) {
-    const data = fs.readFileSync(argv.token, { encoding: "utf8" });
-    config.token = data.trim();
-    logger.log("using specified token file: " + argv.token);
-}
+    const bot = new GatekeeperBot(config);
 
-const bot = new GatekeeperBot(config);
-
-if (argv.start) {
-    void bot.setState(GatekeeperBot.State.Active);
-}
-
-void bot.connect();
-
-process.stdin.resume();
-
-function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode = 0) {
-    if (options.cleanup) {
-        void (async () => {
-            logger.log("closing sqlite connection...");
-            await bot.disconnect();
-            logger.log("sqlite connection closed.")
-            if (options.exit) process.exit(exitCode);
-        })();
+    if (argv.purge) {
+        purge(bot).catch(e => {
+            console.error("error purging database:");
+            console.error(e);
+        });
     } else {
-        if (options.exit) process.exit(exitCode);        
+        launch(bot);
     }
 }
 
-bot.ondisconnect = () => exitHandler({ exit: true }, 0);
+async function purge(bot: GatekeeperBot): Promise<void> {
+    logger.log(`purging unselected entries...`);
+    const result = await bot.database.purge();
+    logger.log(`purged ${result.changes} entries.`);
+    logger.log(`run the bot without the --purge flag to continue`);
+    return Promise.resolve();
+}
 
-process.on('exit',      exitHandler.bind(null, { exit: true }));
-process.on('SIGINT',    exitHandler.bind(null, { cleanup: true, exit: true }));
-process.on('SIGUSR1',   exitHandler.bind(null, { exit:true }));
-process.on('SIGUSR2',   exitHandler.bind(null, { exit:true }));
+function launch(bot: GatekeeperBot) {
+    if (argv.start) {
+        void bot.setState(GatekeeperBot.State.Active);
+    }
 
-//catches uncaught exceptions
-process.on('uncaughtException', (e) => {
-    logger.error(e);
-    exitHandler({exit:true}, 1);
-});
+    void bot.connect();
+
+    process.stdin.resume();
+
+    function exitHandler(options: { exit?: boolean, cleanup?: boolean }, exitCode = 0) {
+        if (options.cleanup) {
+            void (async () => {
+                logger.log("closing sqlite connection...");
+                await bot.disconnect();
+                logger.log("sqlite connection closed.")
+                if (options.exit) process.exit(exitCode);
+            })();
+        } else {
+            if (options.exit) process.exit(exitCode);
+        }
+    }
+
+    bot.ondisconnect = () => exitHandler({ exit: true }, 0);
+
+    process.on('exit', exitHandler.bind(null, { exit: true }));
+
+    process.on('SIGINT', exitHandler.bind(null, { cleanup: true, exit: true }));
+    process.on('SIGUSR1', exitHandler.bind(null, { exit: true }));
+    process.on('SIGUSR2', exitHandler.bind(null, { exit: true }));
+
+    //catches uncaught exceptions
+
+    process.on('uncaughtException', (e) => {
+        logger.error(e);
+        exitHandler({ exit: true }, 1);
+    });
+}
+
+main();
